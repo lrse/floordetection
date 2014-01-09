@@ -1,0 +1,22 @@
+<launch>
+  <node name="camera" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="320" />
+    <param name="image_height" value="240" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+  </node>
+  <!--
+  <node name="joy" pkg="joy" type="joy_node"/>
+  <node name="keyboard" pkg="keyboard" type="keyboard"/>
+  
+  <node name="robot" pkg="exabot" type="exabot"/>
+
+  <node name="universal_teleop" pkg="universal_teleop" type="universal_teleop" output="screen">
+    <rosparam file="input_map.yml"/>
+  </node>
+  -->
+  
+  <node name="configurator" pkg="floordetection" type="configurator" output="screen"/>
+</launch>
