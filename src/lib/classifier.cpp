@@ -135,19 +135,19 @@ void fd::Classifier::extract_training_models(const cv::Rect& roi, const cv::Mat&
     training_models = new_list;
   } while (changed);
   
-  #if SAVE_GRAPHICS
+  //#if SAVE_GRAPHICS
   int rect_size = 32, i = 0;
   training_model_colors.create(50, 32 * training_models.size(), CV_32FC3);
   training_model_colors = cv::Scalar(1,1,1);
-  for (list<Segment>::iterator it = training_models.begin(); it != training_models.end(); ++it, ++i) {
+  for (std::list<Segment>::iterator it = training_models.begin(); it != training_models.end(); ++it, ++i) {
     int coverage = (int)((it->mass / (float)floor_size) * 100);
-    ostringstream ostr; ostr << coverage;
+    std::ostringstream ostr; ostr << coverage;
     cv::putText(training_model_colors, ostr.str(), cv::Point(i * rect_size + 5, 47), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(1,0,0), 1, CV_AA);
     cv::rectangle(training_model_colors, cv::Rect(i * rect_size, 0, rect_size, rect_size), cv::Scalar(it->mu), -1);
     
   }
   cv::cvtColor(training_model_colors, training_model_colors, CV_RGB2BGR);
-  #endif
+  //#endif
 }
 
 void fd::Classifier::update_learnt_models(const std::list<Segment>& training_models)

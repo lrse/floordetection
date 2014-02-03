@@ -14,6 +14,8 @@ fd::Detector::Detector(ros::NodeHandle& _ros_node, bool _show_windows) :
     cv::namedWindow("avg_hsv");
     cv::namedWindow("avg_rgb");
     cv::namedWindow("contour");
+    cv::namedWindow("classified");
+    cv::namedWindow("models");
   }
 
   ros_node.param("median_blur", median_blur, 7);
@@ -70,9 +72,13 @@ void fd::Detector::detect(const cv::Mat& input, std::vector<cv::Point>& frontier
   ROS_INFO_STREAM("frontier size: " << frontier.size());
 
   if (show_windows) {
+    cv::imshow("classified", classified);
+    cv::imshow("models", classifier.training_model_colors);
+    
     cv::Mat contour;
-    cv::cvtColor(input_cropped, contour, CV_RGB2BGR);
-    cv::drawContours(contour, std::vector< std::vector<cv::Point> >(1, frontier), 0, cv::Scalar(255, 255, 0));
+    cv::cvtColor(input, contour, CV_RGB2BGR);
+    cv::line(contour, cv::Point(0, horizon_level), cv::Point(contour.cols, horizon_level), cv::Scalar(0, 255, 255), 1, CV_AA);
+    cv::drawContours(contour, std::vector< std::vector<cv::Point> >(1, frontier), 0, cv::Scalar(255, 255, 0), 1, CV_AA, cv::Mat(), INT_MAX, cv::Point(0, horizon_level));
     cv::imshow("contour", contour);
   }
     
@@ -177,8 +183,8 @@ void fd::Detector::extract_segments(const cv::Mat& input, const cv::Mat& input_h
     cv::imshow("labeled", debug1);
     cv::cvtColor(avg_rgb, debug2, CV_RGB2BGR);
     cv::imshow("avg_rgb", debug2);
-    cv::cvtColor(avg_hsv, debug3, CV_RGB2BGR);
-    cv::imshow("avg_hsv", debug3);
+    /*cv::cvtColor(avg_hsv, debug3, CV_RGB2BGR);
+    cv::imshow("avg_hsv", avg_hsv);*/
   }
 }
 
