@@ -1,0 +1,5 @@
+float32 distance
+---
+float32 final_distance
+---
+float32 distance_traveled

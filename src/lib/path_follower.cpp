@@ -4,15 +4,84 @@ namespace fd = floordetection;
 
 fd::PathFollower::PathFollower(ros::NodeHandle& ros_node) : detector(ros_node, true), robot(ros_node)
 {
+  has_last_odometry = false;
+  started = false;
   image_sub = ros_node.subscribe("/camera/image_raw", 1, &PathFollower::on_image, this);
+  event_sub = ros_node.subscribe("/universal_teleop/events", 1, &PathFollower::on_event, this);
+  odo_sub = ros_node.subscribe("/robot/pose", 1, &PathFollower::on_odometry, this);
   accum_xspeed = accum_aspeed = 0;
   cv::namedWindow("output");
+
+  ros_node.param("xspeed_scale", xspeed_scale, 1.0);
+  ros_node.param("aspeed_scale", aspeed_scale, 1.0);
+
+  start_service = ros_node.advertiseService("start", &PathFollower::start_request, this);
+  stop_service = ros_node.advertiseService("stop", &PathFollower::stop_request, this);
+
+  action_server = boost::shared_ptr<ActionServer>(new ActionServer(ros_node, "follow_path", false));
+  action_server->registerGoalCallback(boost::bind(&PathFollower::new_goal, this));
+  //action_server.registerPreemptCallback(boost::bind(&PathFollower::cancel, this));
+  action_server->start();
+}
+
+void fd::PathFollower::new_goal(void)
+{
+  if (!action_server->isActive() && started) return; // service running
+
+  current_goal = *action_server->acceptNewGoal();
+  ROS_INFO_STREAM("started new goal: " << current_goal.distance);
+  started = true;
+  action_feedback.distance_traveled = 0;
+}
+
+bool fd::PathFollower::start_request(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+  if (action_server->isActive() || started) return false;
+  started = true;
+  return true;
+}
+
+bool fd::PathFollower::stop_request(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+  if (action_server->isActive() || !started) return false;
+  started = false;
+  return true;
+}
+
+void fd::PathFollower::on_odometry(const nav_msgs::Odometry::ConstPtr& msg)
+{
+  ROS_INFO_STREAM("odo " << action_server->isActive());
+  if (has_last_odometry && action_server->isActive()) {
+    const geometry_msgs::Point& current_position = msg->pose.pose.position;
+    const geometry_msgs::Point& last_position = last_odometry.pose.pose.position;
+    float delta_d = hypot(current_position.x - last_position.x, current_position.y - last_position.y);
+    action_feedback.distance_traveled += delta_d;
+    if (action_feedback.distance_traveled >= current_goal.distance) { action_server->setSucceeded(); started = false; }
+    ROS_INFO_STREAM("delta: " << action_feedback.distance_traveled);
+  }
+  has_last_odometry = true;
+  last_odometry = *msg;
 }
 
 void fd::PathFollower::on_image(const sensor_msgs::Image::ConstPtr& msg)
 {
-  cv_bridge::CvImageConstPtr bridge_ptr = cv_bridge::toCvShare(msg, "rgb8");
-  follow(bridge_ptr->image);
+  if (started) {
+    cv_bridge::CvImageConstPtr bridge_ptr = cv_bridge::toCvShare(msg, "rgb8");
+    follow(bridge_ptr->image);
+  }
+}
+
+void fd::PathFollower::on_event(const universal_teleop::Event::ConstPtr& msg)
+{
+  if (!msg->state) return;
+  if (!started && msg->event == "start") {
+    ROS_INFO_STREAM("starting to follow path");
+    started = true;
+  }
+  else if (started && msg->event == "stop") {
+    ROS_INFO_STREAM("stopping path following");
+    started = false;
+  }  
 }
 
 void fd::PathFollower::follow(const cv::Mat& input)
@@ -73,7 +142,7 @@ void fd::PathFollower::compute_control(std::vector<cv::Point>& frontier, const c
   accum_aspeed = delta * accum_aspeed + (1 - delta) * aspeed;
   accum_xspeed = delta * accum_xspeed + (1 - delta) * xspeed;
   ROS_INFO_STREAM("xspeed: " << accum_xspeed << " aspeed: " << accum_aspeed);
-  robot.set_speeds(accum_xspeed, accum_aspeed);
+  robot.set_speeds(xspeed_scale * accum_xspeed, aspeed_scale * accum_aspeed);
     
   size_t xorigin = 32;
   size_t xsize = 20;

@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(floordetection)
 
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -Wfatal-errors)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfatal-errors -O4 -march=native")
 add_definitions(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS cv_bridge geometry_msgs nav_msgs roscpp std_msgs)
+find_package(catkin REQUIRED COMPONENTS cv_bridge geometry_msgs universal_teleop nav_msgs roscpp std_msgs genmsg actionlib_msgs actionlib message_generation)
 
 find_package(OpenCV REQUIRED)
 
@@ -44,6 +44,9 @@ find_package(OpenCV REQUIRED)
 #   geometry_msgs#   nav_msgs#   std_msgs
 # )
 
+add_action_files(DIRECTORY action FILES FollowPath.action)
+generate_messages(DEPENDENCIES std_msgs actionlib_msgs)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -55,7 +58,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #   INCLUDE_DIRS include
 #  LIBRARIES floordetection
-#  CATKIN_DEPENDS cv_bridge geometry_msgs nav_msgs roscpp std_msgs
+  CATKIN_DEPENDS cv_bridge geometry_msgs nav_msgs roscpp std_msgs universal_teleop
 #  DEPENDS system_lib
 )
 
